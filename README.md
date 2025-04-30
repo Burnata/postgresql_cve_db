@@ -74,14 +74,30 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 ## Struktura katalogów
 
 ```json
-cves/                  # Pliki JSON z danymi CVE
+cves/                                       # Pliki JSON z danymi CVE
 import_cve_to_postgres/
-    import_cve_simple.py                # Import danych podstawowych CVE
-    import_cve_exploit_and_fix_status.py# Import statusów exploitów i poprawek
-    import_vendors.py                   # Import vendorów
-    report_oracle_exploits_with_fixes.py# Raport podatności Oracle
-    postgres.yaml                       # Konfiguracja PostgreSQL (Kubernetes)
-    vendors.sql                         # Skrypt SQL do tabeli vendors
+    import_cve_simple.py                    # Import danych podstawowych CVE
+    import_cve_exploit_and_fix_status.py    # Import statusów exploitów i poprawek
+    import_vendors.py                       # Import vendorów
+    report_oracle_exploits_with_fixes.py    # Raport podatności Oracle
+    postgres.yaml                           # Konfiguracja PostgreSQL (Kubernetes)
+    vendors.sql                             # Skrypt SQL do tabeli vendors
+flask_app/
+    app.py                                  # Główny plik aplikacji Flask
+    Dockerfile                              # Plik do budowy obrazu kontenera
+    requirements.txt                        # Zależności Pythona
+    build-multiarch.ps1                     # Skrypt PowerShell do budowy obrazu multi-arch
+    build-multiarch.sh                      # Skrypt Shell do budowy obrazu multi-arch
+    templates/                              # Szablony HTML
+        base.html                           # Bazowy szablon z layoutem strony
+        index.html                          # Szablon strony głównej z listą CVE
+        detail.html                         # Szablon szczegółów danego CVE
+    k8s/                                    # Konfiguracja Kubernetes
+        deployment.yaml                     # Plik definicji Deployment
+        service.yaml                        # Plik definicji Service
+        configmap.yaml                      # ConfigMap z konfiguracją DB
+        secret.yaml                         # Sekret z danymi dostępowymi do DB
+        kustomization.yaml                  # Plik Kustomize
 ```
 
 ---
@@ -94,6 +110,77 @@ import_cve_to_postgres/
    - Uruchom `import_vendors.py` – tworzy i wypełnia tabelę `vendors`.
 2. **Raportowanie:**
    - Uruchom `report_oracle_exploits_with_fixes.py` – generuje raport CSV podatności Oracle z exploitem i poprawką.
+3. **Aplikacja webowa:**
+   - Aplikacja Flask umożliwia przeglądanie bazy CVE przez interfejs webowy
+   - Funkcje: filtrowanie, paginacja i wyświetlanie szczegółów CVE
+
+---
+
+## Aplikacja webowa (Flask)
+
+### Funkcjonalność
+
+Aplikacja webowa dostarcza wygodny interfejs użytkownika do przeglądania bazy danych CVE i zawiera:
+
+- **Listę podatności** z filtrowaniem według:
+  - Vendora
+  - Dostępności exploita
+  - Dostępności poprawki
+- **Paginację** wyników
+- **Szczegółowy widok** każdej podatności, zawierający:
+  - Podstawowe informacje (ID, pakiet, wynik CVSS)
+  - Status exploita i poprawki
+  - Powiązani vendorzy
+  - Ocena ryzyka
+  - Linki zewnętrzne do źródeł (NVD, MITRE)
+
+### Uruchamianie lokalnie
+
+```bash
+cd flask_app
+pip install -r requirements.txt
+python app.py
+```
+
+Aplikacja będzie dostępna pod adresem: <http://localhost:5000>
+
+### Budowa i wdrażanie do Kubernetes
+
+1. **Budowanie obrazu kontenera:**
+
+   ```bash
+   cd flask_app
+   # Linux/Mac
+   ./build-multiarch.sh
+   # Windows
+   .\build-multiarch.ps1
+   ```
+
+2. **Wdrażanie do Kubernetes:**
+
+   ```bash
+   cd flask_app/k8s
+   kubectl apply -k .
+   ```
+
+3. **Dostęp do aplikacji:**
+   Aplikacja będzie dostępna przez LoadBalancer na porcie 80, przekierowanym do portu 5000 aplikacji.
+
+   ```bash
+   kubectl get svc -n postgres-db cve-flask-app
+   ```
+
+### Zmienne środowiskowe
+
+Aplikacja używa następujących zmiennych środowiskowych do konfiguracji połączenia z bazą danych:
+
+- `DB_HOST` - host bazy danych (domyślnie: localhost)
+- `DB_PORT` - port bazy danych (domyślnie: 5432)
+- `DB_NAME` - nazwa bazy danych (domyślnie: mydatabase)
+- `DB_USER` - użytkownik bazy danych (domyślnie: myuser)
+- `DB_PASSWORD` - hasło do bazy danych (domyślnie: mypassword)
+
+W konfiguracji Kubernetes zmienne te są dostarczane przez ConfigMap i Secret.
 
 ---
 
