@@ -32,6 +32,7 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 ## Struktura bazy danych
 
 ### Tabela: `cve_simple`
+
 | Kolumna          | Typ      | Opis                        |
 |------------------|----------|-----------------------------|
 | id               | SERIAL   | Klucz główny                |
@@ -40,6 +41,7 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 | score            | REAL     | Wynik podatności (CVSS)     |
 
 ### Tabela: `cve_exploit_status`
+
 | Kolumna            | Typ      | Opis                        |
 |--------------------|----------|-----------------------------|
 | id                 | SERIAL   | Klucz główny                |
@@ -47,6 +49,7 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 | has_active_exploit | BOOLEAN  | Czy istnieje exploit        |
 
 ### Tabela: `cve_fix_status`
+
 | Kolumna   | Typ      | Opis                        |
 |-----------|----------|-----------------------------|
 | id        | SERIAL   | Klucz główny                |
@@ -54,6 +57,7 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 | has_fix   | BOOLEAN  | Czy istnieje poprawka       |
 
 ### Tabela: `vendors`
+
 | Kolumna     | Typ      | Opis                        |
 |-------------|----------|-----------------------------|
 | id          | SERIAL   | Klucz główny                |
@@ -61,6 +65,7 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 | vendor_name | TEXT     | Nazwa vendora               |
 
 #### Relacje
+
 - `cve_simple` jest tabelą główną.
 - Pozostałe tabele powiązane są przez `cve_id` (ON DELETE CASCADE).
 
@@ -68,7 +73,7 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 
 ## Struktura katalogów
 
-```
+```json
 cves/                  # Pliki JSON z danymi CVE
 import_cve_to_postgres/
     import_cve_simple.py                # Import danych podstawowych CVE
@@ -104,4 +109,3 @@ import_cve_to_postgres/
 ## Autorzy i kontakt
 
 Projekt do celów edukacyjnych i demonstracyjnych.
-
