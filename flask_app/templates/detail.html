@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}{{ cve.cve_id }} | CVE Database{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>{{ cve.cve_id }}</h1>
+    <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to List</a>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">CVE Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Affected Package:</div>
+                    <div class="col-md-8">{{ cve.affected_package }}</div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">CVSS Score:</div>
+                    <div class="col-md-8">
+                        <span class="badge {% if cve.score is not none and cve.score >= 7.0 %}bg-danger{% elif cve.score is not none and cve.score >= 4.0 %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                            {{ "%.1f"|format(cve.score) if cve.score else "N/A" }}
+                        </span>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Exploit Status:</div>
+                    <div class="col-md-8">
+                        {% if cve.has_active_exploit %}
+                            <span class="badge bg-danger">Active Exploit Available</span>
+                        {% else %}
+                            <span class="badge bg-secondary">No Known Exploit</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-4 fw-bold">Fix Status:</div>
+                    <div class="col-md-8">
+                        {% if cve.has_fix %}
+                            <span class="badge bg-success">Fix Available</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">No Fix Available</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Vendors</h5>
+            </div>
+            <div class="card-body">
+                {% if vendors %}
+                <ul class="list-group">
+                    {% for vendor in vendors %}
+                    <li class="list-group-item">{{ vendor }}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-muted mb-0">No vendor information available.</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Risk Assessment</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert {% if cve.has_active_exploit and not cve.has_fix %}alert-danger{% elif cve.has_active_exploit or not cve.has_fix %}alert-warning{% else %}alert-success{% endif %}">
+                    {% if cve.has_active_exploit and not cve.has_fix %}
+                        <p class="mb-0"><strong>High Risk:</strong> Active exploit available with no fix.</p>
+                    {% elif cve.has_active_exploit %}
+                        <p class="mb-0"><strong>Medium Risk:</strong> Active exploit available but fix is available.</p>
+                    {% elif not cve.has_fix %}
+                        <p class="mb-0"><strong>Medium Risk:</strong> No fix available but no known exploit.</p>
+                    {% else %}
+                        <p class="mb-0"><strong>Low Risk:</strong> Fix available and no known exploit.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4">
+    <div class="card-header">
+        <h5 class="mb-0">External References</h5>
+    </div>
+    <div class="card-body">
+        <a href="https://nvd.nist.gov/vuln/detail/{{ cve.cve_id }}" target="_blank" class="btn btn-info me-2">
+            NIST NVD
+        </a>
+        <a href="https://cve.mitre.org/cgi-bin/cvename.cgi?name={{ cve.cve_id }}" target="_blank" class="btn btn-info me-2">
+            MITRE CVE
+        </a>
+        <a href="https://www.google.com/search?q={{ cve.cve_id }}" target="_blank" class="btn btn-outline-secondary">
+            Search Google
+        </a>
+    </div>
+</div>
+{% endblock %}

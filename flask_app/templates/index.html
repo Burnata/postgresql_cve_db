@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}CVE Database | Home{% endblock %}
+
+{% block content %}
+<h1 class="mb-4">CVE Database</h1>
+
+<!-- Filter Form -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Filter CVEs</h5>
+    </div>
+    <div class="card-body">
+        <form method="get" action="{{ url_for('index') }}" class="row g-3">
+            <div class="col-md-4">
+                <label for="vendor" class="form-label">Vendor</label>
+                <select class="form-select" id="vendor" name="vendor">
+                    <option value="">All Vendors</option>
+                    {% for v in vendors %}
+                        <option value="{{ v }}" {% if vendor == v %}selected{% endif %}>{{ v }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="has_exploit" class="form-label">Exploit Status</label>
+                <select class="form-select" id="has_exploit" name="has_exploit">
+                    <option value="">Any</option>
+                    <option value="true" {% if has_exploit == 'true' %}selected{% endif %}>Has Exploit</option>
+                    <option value="false" {% if has_exploit == 'false' %}selected{% endif %}>No Exploit</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="has_fix" class="form-label">Fix Status</label>
+                <select class="form-select" id="has_fix" name="has_fix">
+                    <option value="">Any</option>
+                    <option value="true" {% if has_fix == 'true' %}selected{% endif %}>Has Fix</option>
+                    <option value="false" {% if has_fix == 'false' %}selected{% endif %}>No Fix</option>
+                </select>
+            </div>
+            <div class="col-12">
+                <button type="submit" class="btn btn-primary">Apply Filters</button>
+                <a href="{{ url_for('index') }}" class="btn btn-secondary">Reset</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- CVE Table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">CVE List</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0 cve-table">
+                <thead class="table-dark">
+                    <tr>
+                        <th>CVE ID</th>
+                        <th>Affected Package</th>
+                        <th>Score</th>
+                        <th>Vendors</th>
+                        <th>Exploit</th>
+                        <th>Fix</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cve in cves %}
+                    <tr class="{% if cve.score is not none and cve.score >= 7.0 %}severity-high{% elif cve.score is not none and cve.score >= 4.0 %}severity-medium{% else %}severity-low{% endif %}">
+                        <td>{{ cve.cve_id }}</td>
+                        <td>{{ cve.affected_package }}</td>
+                        <td>{{ "%.1f"|format(cve.score) if cve.score else "N/A" }}</td>
+                        <td>{{ cve.vendors }}</td>
+                        <td>
+                            {% if cve.has_active_exploit %}
+                                <span class="badge bg-danger">Yes</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if cve.has_fix %}
+                                <span class="badge bg-success">Yes</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">No</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('cve_detail', cve_id=cve.cve_id) }}" class="btn btn-sm btn-primary">Details</a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-3">No CVEs found matching your criteria.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav aria-label="Page navigation" class="mt-4">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {% if page == 1 %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('index', page=page-1, vendor=vendor, has_exploit=has_exploit, has_fix=has_fix) }}">Previous</a>
+        </li>
+        
+        {% for p in range(1, total_pages + 1) %}
+            {% if p >= page - 2 and p <= page + 2 %}
+            <li class="page-item {% if p == page %}active{% endif %}">
+                <a class="page-link" href="{{ url_for('index', page=p, vendor=vendor, has_exploit=has_exploit, has_fix=has_fix) }}">{{ p }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+        
+        <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+            <a class="page-link" href="{{ url_for('index', page=page+1, vendor=vendor, has_exploit=has_exploit, has_fix=has_fix) }}">Next</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
