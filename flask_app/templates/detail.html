@@ -1,8 +1,19 @@
 {% extends "base.html" %}
 
-{% block title %}{{ cve.cve_id }} | CVE Database{% endblock %}
+{% block title %}{% if cve %}{{ cve.cve_id }}{% else %}Error{% endif %} | CVE Database{% endblock %}
 
 {% block content %}
+{% if error_message %}
+<!-- Error Message Alert -->
+<div class="alert alert-danger mb-4" role="alert">
+    <h4 class="alert-heading">Error!</h4>
+    <p>{{ error_message }}</p>
+    <hr>
+    <p class="mb-0">
+        <a href="{{ url_for('index') }}" class="btn btn-outline-light">Return to Homepage</a>
+    </p>
+</div>
+{% else %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1>{{ cve.cve_id }}</h1>
     <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to List</a>
@@ -106,4 +117,5 @@
         </a>
     </div>
 </div>
+{% endif %}
 {% endblock %}

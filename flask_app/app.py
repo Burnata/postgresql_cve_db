@@ -85,32 +85,39 @@ def index():
         count_query += " AND cfs.has_fix = %s"
         count_params.append(has_fix_bool)
     
-    conn = get_connection()
+    cves = []
+    vendors = []
+    total_pages = 1
+    error_message = None
+    
     try:
-        with conn.cursor(cursor_factory=DictCursor) as cur:
-            # Get total count for pagination
-            cur.execute(count_query, count_params)
-            total_count = cur.fetchone()[0]
-            total_pages = (total_count + per_page - 1) // per_page
-            
-            # Get CVE records
-            cur.execute(query, params)
-            cves = cur.fetchall()
-            
-            # Get vendors for filter dropdown
-            cur.execute("""
-                SELECT DISTINCT vendor_name 
-                FROM vendors 
-                ORDER BY vendor_name
-            """)
-            vendors = [row[0] for row in cur.fetchall()]
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=DictCursor) as cur:
+                # Get total count for pagination
+                cur.execute(count_query, count_params)
+                total_count = cur.fetchone()[0]
+                total_pages = (total_count + per_page - 1) // per_page
+                
+                # Get CVE records
+                cur.execute(query, params)
+                cves = cur.fetchall()
+                
+                # Get vendors for filter dropdown
+                cur.execute("""
+                    SELECT DISTINCT vendor_name 
+                    FROM vendors 
+                    ORDER BY vendor_name
+                """)
+                vendors = [row[0] for row in cur.fetchall()]
+        except Exception as e:
+            app.logger.error(f"Database query error: {e}")
+            error_message = f"Error executing database query: {e}"
+        finally:
+            conn.close()
     except Exception as e:
-        print(f"Database error: {e}")
-        cves = []
-        vendors = []
-        total_pages = 1
-    finally:
-        conn.close()
+        app.logger.error(f"Database connection error: {e}")
+        error_message = "Unable to connect to the database. Please try again later."
     
     return render_template(
         'index.html', 
@@ -120,43 +127,51 @@ def index():
         has_exploit=has_exploit,
         has_fix=has_fix,
         page=page,
-        total_pages=total_pages
+        total_pages=total_pages,
+        error_message=error_message
     )
 
 @app.route('/cve/<cve_id>')
 def cve_detail(cve_id):
-    conn = get_connection()
-    try:
-        with conn.cursor(cursor_factory=DictCursor) as cur:
-            # Get CVE basic info
-            cur.execute("""
-                SELECT cs.cve_id, cs.affected_package, cs.score, 
-                       ces.has_active_exploit, cfs.has_fix
-                FROM cve_simple cs
-                LEFT JOIN cve_exploit_status ces ON cs.cve_id = ces.cve_id
-                LEFT JOIN cve_fix_status cfs ON cs.cve_id = cfs.cve_id
-                WHERE cs.cve_id = %s
-            """, (cve_id,))
-            cve = cur.fetchone()
-            
-            # Get vendors for this CVE
-            cur.execute("""
-                SELECT vendor_name
-                FROM vendors
-                WHERE cve_id = %s
-            """, (cve_id,))
-            vendors = [row[0] for row in cur.fetchall()]
-    except Exception as e:
-        print(f"Database error: {e}")
-        cve = None
-        vendors = []
-    finally:
-        conn.close()
+    cve = None
+    vendors = []
+    error_message = None
     
-    if not cve:
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=DictCursor) as cur:
+                # Get CVE basic info
+                cur.execute("""
+                    SELECT cs.cve_id, cs.affected_package, cs.score, 
+                           ces.has_active_exploit, cfs.has_fix
+                    FROM cve_simple cs
+                    LEFT JOIN cve_exploit_status ces ON cs.cve_id = ces.cve_id
+                    LEFT JOIN cve_fix_status cfs ON cs.cve_id = cfs.cve_id
+                    WHERE cs.cve_id = %s
+                """, (cve_id,))
+                cve = cur.fetchone()
+                
+                # Get vendors for this CVE
+                cur.execute("""
+                    SELECT vendor_name
+                    FROM vendors
+                    WHERE cve_id = %s
+                """, (cve_id,))
+                vendors = [row[0] for row in cur.fetchall()]
+        except Exception as e:
+            app.logger.error(f"Database query error: {e}")
+            error_message = f"Error executing database query: {e}"
+        finally:
+            conn.close()
+    except Exception as e:
+        app.logger.error(f"Database connection error: {e}")
+        error_message = "Unable to connect to the database. Please try again later."
+    
+    if not cve and not error_message:
         return redirect(url_for('index'))
     
-    return render_template('detail.html', cve=cve, vendors=vendors)
+    return render_template('detail.html', cve=cve, vendors=vendors, error_message=error_message)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
