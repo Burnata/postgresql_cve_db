@@ -3,6 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for
 import psycopg2
 from psycopg2.extras import DictCursor
 from dotenv import load_dotenv
+import sys
 
 # Load environment variables from .env file
 load_dotenv()
@@ -10,13 +11,18 @@ load_dotenv()
 app = Flask(__name__)
 
 def get_connection():
-    return psycopg2.connect(
-        host=os.getenv("DB_HOST", "localhost"),
-        port=os.getenv("DB_PORT", "5432"),
-        dbname=os.getenv("DB_NAME", "mydatabase"),
-        user=os.getenv("DB_USER", "myuser"),
-        password=os.getenv("DB_PASSWORD", "mypassword")
-    )
+    try:
+        print(f"Attempting to connect to database: host={os.getenv('DB_HOST', 'localhost')}, port={os.getenv('DB_PORT', '5432')}, dbname={os.getenv('DB_NAME', 'mydatabase')}")
+        return psycopg2.connect(
+            host=os.getenv("DB_HOST", "localhost"),
+            port=os.getenv("DB_PORT", "5432"),
+            dbname=os.getenv("DB_NAME", "mydatabase"),
+            user=os.getenv("DB_USER", "myuser"),
+            password=os.getenv("DB_PASSWORD", "mypassword")
+        )
+    except Exception as e:
+        print(f"Database connection error: {e}", file=sys.stderr)
+        raise
 
 @app.route('/')
 def index():
@@ -172,6 +178,83 @@ def cve_detail(cve_id):
         return redirect(url_for('index'))
     
     return render_template('detail.html', cve=cve, vendors=vendors, error_message=error_message)
+
+@app.route('/schema')
+def db_schema():
+    """Display the database schema and relationships."""
+    error_message = None
+    tables = []
+    relationships = []
+    
+    try:
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=DictCursor) as cur:
+                # Get table information
+                tables_query = """
+                    SELECT 
+                        table_name, 
+                        (SELECT string_agg(column_name || ' (' || data_type || ')', ', ')
+                         FROM information_schema.columns
+                         WHERE table_name = t.table_name
+                         AND table_schema = 'public'
+                        ) as columns
+                    FROM information_schema.tables t
+                    WHERE table_schema = 'public'
+                    AND table_type = 'BASE TABLE'
+                    AND table_name IN ('cve_simple', 'cve_exploit_status', 'cve_fix_status', 'vendors')
+                """
+                cur.execute(tables_query)
+                for row in cur.fetchall():
+                    tables.append({
+                        'name': row['table_name'],
+                        'columns': row['columns']
+                    })
+                
+                # Get foreign key relationships
+                relationships_query = """
+                    SELECT
+                        tc.table_name as table_name,
+                        kcu.column_name as column_name,
+                        ccu.table_name as referenced_table,
+                        ccu.column_name as referenced_column
+                    FROM
+                        information_schema.table_constraints AS tc
+                        JOIN information_schema.key_column_usage AS kcu
+                          ON tc.constraint_name = kcu.constraint_name
+                          AND tc.table_schema = kcu.table_schema
+                        JOIN information_schema.constraint_column_usage AS ccu
+                          ON ccu.constraint_name = tc.constraint_name
+                          AND ccu.table_schema = tc.table_schema
+                    WHERE tc.constraint_type = 'FOREIGN KEY'
+                    AND tc.table_schema = 'public'
+                """
+                cur.execute(relationships_query)
+                relationships = cur.fetchall()
+                
+                # Get table row counts
+                tables_with_counts = []
+                for table in tables:
+                    count_query = f"SELECT COUNT(*) as count FROM {table['name']}"
+                    cur.execute(count_query)
+                    count = cur.fetchone()['count']
+                    tables_with_counts.append({
+                        'name': table['name'],
+                        'columns': table['columns'],
+                        'row_count': count
+                    })
+                tables = tables_with_counts
+                
+        except Exception as e:
+            app.logger.error(f"Database query error: {e}")
+            error_message = f"Error executing database query: {e}"
+        finally:
+            conn.close()
+    except Exception as e:
+        app.logger.error(f"Database connection error: {e}")
+        error_message = "Unable to connect to the database. Please try again later."
+    
+    return render_template('schema.html', tables=tables, relationships=relationships, error_message=error_message)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

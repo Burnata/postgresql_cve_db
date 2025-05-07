@@ -6,3 +6,7 @@ htmlcov/
 # Python cache
 __pycache__/
 *.pyc
+
+# SSL files
+/ssl/*
+*.env
