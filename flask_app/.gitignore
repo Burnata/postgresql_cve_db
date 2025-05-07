@@ -10,3 +10,4 @@ __pycache__/
 # SSL files
 /ssl/*
 *.env
+/k8s/secret/secret.yaml
