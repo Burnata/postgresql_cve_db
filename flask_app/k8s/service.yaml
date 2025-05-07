@@ -5,6 +5,10 @@ metadata:
   namespace: postgres-db
   labels:
     app: cve-flask-app
+  annotations:
+    service.beta.kubernetes.io/oci-load-balancer-shape: "flexible"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: "2"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: "2"
 spec:
   type: LoadBalancer
   ports:
