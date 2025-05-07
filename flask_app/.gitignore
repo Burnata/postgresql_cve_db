@@ -1,0 +1,13 @@
+# Coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# SSL files
+/ssl/*
+*.env
+/k8s/secret/secret.yaml

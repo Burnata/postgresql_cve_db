@@ -5,11 +5,23 @@ metadata:
   namespace: postgres-db
   labels:
     app: cve-flask-app
+  annotations:
+    service.beta.kubernetes.io/oci-load-balancer-shape: "flexible"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-min: "2"
+    service.beta.kubernetes.io/oci-load-balancer-shape-flex-max: "2"
+    service.beta.kubernetes.io/oci-load-balancer-ssl-ports: "443"
+    service.beta.kubernetes.io/oci-load-balancer-tls-cipher-suites: "TLS_AES_128_GCM_SHA256,TLS_AES_256_GCM_SHA384,TLS_CHACHA20_POLY1305_SHA256"
+    service.beta.kubernetes.io/oci-load-balancer-ssl-protocols: "TLSv1.3"
 spec:
   type: LoadBalancer
   ports:
   - port: 80
     targetPort: 5000
     protocol: TCP
+    name: http
+  - port: 443
+    targetPort: 5000
+    protocol: TCP
+    name: https
   selector:
     app: cve-flask-app
