@@ -3,6 +3,8 @@
 ## Opis projektu
 
 System służy do importowania, przechowywania i raportowania informacji o podatnościach (CVE) wraz z informacjami o exploitach, poprawkach oraz powiązanych vendorach. Dane są pobierane z plików JSON i ładowane do bazy PostgreSQL.
+![Main Page_](https://github.com/user-attachments/assets/0971562c-d617-4e6d-93ac-94b075d92e01)
+
 
 ---
 
@@ -30,6 +32,7 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 ---
 
 ## Struktura bazy danych
+![schema](https://github.com/user-attachments/assets/b9dae639-a2d0-4bcf-b0a0-80df9a282f33)
 
 ### Tabela: `cve_simple`
 
