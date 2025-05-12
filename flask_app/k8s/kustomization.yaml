@@ -6,5 +6,4 @@ namespace: postgres-db
 resources:
   - deployment.yaml
   - service.yaml
-  - secret.yaml
-  - configmap.yaml
+  - /secret/secret.yaml
