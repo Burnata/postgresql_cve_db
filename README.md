@@ -80,24 +80,30 @@ import_cve_to_postgres/
     import_cve_exploit_and_fix_status.py    # Import statusów exploitów i poprawek
     import_vendors.py                       # Import vendorów
     report_oracle_exploits_with_fixes.py    # Raport podatności Oracle
-    postgres.yaml                           # Konfiguracja PostgreSQL (Kubernetes)
+    k8s/
+        postgres.yaml                       # Konfiguracja PostgreSQL (Kubernetes)
     vendors.sql                             # Skrypt SQL do tabeli vendors
 flask_app/
+    .coverage                               # Raport pokrycia testów
+    .env                                    # Zmienne środowiskowe lokalne
+    .gitignore                              # Pliki ignorowane przez git
+    .well-known/                            # Katalog dla certyfikatów i weryfikacji
     app.py                                  # Główny plik aplikacji Flask
     Dockerfile                              # Plik do budowy obrazu kontenera
     requirements.txt                        # Zależności Pythona
+    test_app.py                             # Testy jednostkowe dla aplikacji
     build-multiarch.ps1                     # Skrypt PowerShell do budowy obrazu multi-arch
     build-multiarch.sh                      # Skrypt Shell do budowy obrazu multi-arch
     templates/                              # Szablony HTML
         base.html                           # Bazowy szablon z layoutem strony
         index.html                          # Szablon strony głównej z listą CVE
         detail.html                         # Szablon szczegółów danego CVE
+        schema.html                         # Szablon widoku schematu bazy danych
     k8s/                                    # Konfiguracja Kubernetes
         deployment.yaml                     # Plik definicji Deployment
         service.yaml                        # Plik definicji Service
-        configmap.yaml                      # ConfigMap z konfiguracją DB
-        secret.yaml                         # Sekret z danymi dostępowymi do DB
         kustomization.yaml                  # Plik Kustomize
+        secret/                             # Katalog z sekretami Kubernetes
 ```
 
 ---
@@ -113,6 +119,7 @@ flask_app/
 3. **Aplikacja webowa:**
    - Aplikacja Flask umożliwia przeglądanie bazy CVE przez interfejs webowy
    - Funkcje: filtrowanie, paginacja i wyświetlanie szczegółów CVE
+   - Widok schematu bazy danych
 
 ---
 
@@ -133,6 +140,7 @@ Aplikacja webowa dostarcza wygodny interfejs użytkownika do przeglądania bazy 
   - Powiązani vendorzy
   - Ocena ryzyka
   - Linki zewnętrzne do źródeł (NVD, MITRE)
+- **Widok schematu bazy danych** pokazujący relacje między tabelami
 
 ### Uruchamianie lokalnie
 
