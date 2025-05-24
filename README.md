@@ -5,7 +5,6 @@
 System służy do importowania, przechowywania i raportowania informacji o podatnościach (CVE) wraz z informacjami o exploitach, poprawkach oraz powiązanych vendorach. Dane są pobierane z plików JSON i ładowane do bazy PostgreSQL.
 ![Main Page_](https://github.com/user-attachments/assets/0971562c-d617-4e6d-93ac-94b075d92e01)
 
-
 ---
 
 ## Wymagania funkcjonalne
@@ -15,6 +14,8 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 3. **Rejestrowanie powiązanych vendorów** – przypisanie do każdej podatności listy vendorów (dostawców).
 4. **Raportowanie podatności** – generowanie raportów, np. lista podatności Oracle z exploitem i poprawką.
 5. **Integralność danych** – spójność danych zapewniona przez klucze obce i unikalność identyfikatorów CVE.
+6. **Uwierzytelnianie użytkowników** – system logowania i rejestracji użytkowników.
+7. **Panel Administracyjny** – zarządzanie kontami użytkowników (usuwanie, zmiana hasła) dostępne dla użytkownika "Admin".
 
 ---
 
@@ -32,6 +33,7 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 ---
 
 ## Struktura bazy danych
+
 ![schema](https://github.com/user-attachments/assets/b9dae639-a2d0-4bcf-b0a0-80df9a282f33)
 
 ### Tabela: `cve_simple`
@@ -66,6 +68,14 @@ System służy do importowania, przechowywania i raportowania informacji o podat
 | id          | SERIAL   | Klucz główny                |
 | cve_id      | TEXT     | Klucz obcy do `cve_simple`  |
 | vendor_name | TEXT     | Nazwa vendora               |
+
+### Tabela: `users` (Nowa)
+
+| Kolumna         | Typ      | Opis                                  |
+|-----------------|----------|---------------------------------------|
+| id              | SERIAL   | Klucz główny                          |
+| username        | VARCHAR(80) | Unikalna nazwa użytkownika            |
+| password_hash   | TEXT     | Zahaszowane hasło użytkownika         |
 
 #### Relacje
 
@@ -102,6 +112,10 @@ flask_app/
         index.html                          # Szablon strony głównej z listą CVE
         detail.html                         # Szablon szczegółów danego CVE
         schema.html                         # Szablon widoku schematu bazy danych
+        login.html                          # Szablon strony logowania (Nowy)
+        register.html                       # Szablon strony rejestracji (Nowy)
+        admin_panel.html                    # Szablon panelu administratora (Nowy)
+        admin_edit_user.html                # Szablon edycji użytkownika przez admina (Nowy)
     k8s/                                    # Konfiguracja Kubernetes
         deployment.yaml                     # Plik definicji Deployment
         service.yaml                        # Plik definicji Service
@@ -123,6 +137,8 @@ flask_app/
    - Aplikacja Flask umożliwia przeglądanie bazy CVE przez interfejs webowy
    - Funkcje: filtrowanie, paginacja i wyświetlanie szczegółów CVE
    - Widok schematu bazy danych
+   - System logowania i rejestracji użytkowników
+   - Panel administracyjny dla użytkownika "Admin" do zarządzania kontami (usuwanie, zmiana hasła)
 
 ---
 
@@ -144,6 +160,14 @@ Aplikacja webowa dostarcza wygodny interfejs użytkownika do przeglądania bazy 
   - Ocena ryzyka
   - Linki zewnętrzne do źródeł (NVD, MITRE)
 - **Widok schematu bazy danych** pokazujący relacje między tabelami
+- **System uwierzytelniania:**
+  - Rejestracja nowych użytkowników
+  - Logowanie istniejących użytkowników
+  - Wylogowywanie
+- **Panel Administracyjny (dla użytkownika "Admin"):**
+  - Lista zarejestrowanych użytkowników (poza kontem "Admin")
+  - Możliwość usunięcia użytkownika
+  - Możliwość zmiany hasła użytkownika
 
 ### Uruchamianie lokalnie
 
@@ -190,6 +214,7 @@ Aplikacja używa następujących zmiennych środowiskowych do konfiguracji poł�
 - `DB_NAME` - nazwa bazy danych (domyślnie: mydatabase)
 - `DB_USER` - użytkownik bazy danych (domyślnie: myuser)
 - `DB_PASSWORD` - hasło do bazy danych (domyślnie: mypassword)
+- `FLASK_SECRET_KEY` - klucz sekretny dla sesji Flask (ważne dla bezpieczeństwa, zalecane ustawienie własnego w `.env`)
 
 W konfiguracji Kubernetes zmienne te są dostarczane przez ConfigMap i Secret.
 
@@ -199,7 +224,7 @@ W konfiguracji Kubernetes zmienne te są dostarczane przez ConfigMap i Secret.
 
 - Python 3.x
 - PostgreSQL
-- Biblioteki: psycopg2, python-dotenv
+- Biblioteki: Flask, psycopg2-binary, python-dotenv, Werkzeug
 - (Opcjonalnie) Kubernetes do uruchomienia bazy (patrz `postgres.yaml`)
 
 ---
