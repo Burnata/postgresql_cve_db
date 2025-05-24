@@ -18,22 +18,60 @@
         .severity-low {
             background-color: #d1e7dd;
         }
+        /* Hamburger icon styles */
+        .custom-hamburger {
+            width: 30px;
+            height: 22px;
+            display: inline-block;
+            position: relative;
+        }
+        .custom-hamburger span {
+            display: block;
+            height: 4px;
+            width: 100%;
+            background: #fff;
+            border-radius: 2px;
+            position: absolute;
+            left: 0;
+            transition: 0.3s;
+        }
+        .custom-hamburger span:nth-child(1) { top: 0; }
+        .custom-hamburger span:nth-child(2) { top: 9px; }
+        .custom-hamburger span:nth-child(3) { top: 18px; }
     </style>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
         <div class="container">
             <a class="navbar-brand" href="{{ url_for('index') }}">CVE Database</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="custom-hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </span>
             </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
                 <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{{ url_for('index') }}">Home</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/schema' %}active{% endif %}" href="{{ url_for('db_schema') }}">Database Schema</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle {% if request.path == '/' or request.path == '/schema' %}active{% endif %}" href="#" id="navbarDropdownMenuLink" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Menu
+                        </a>
+                        <ul class="dropdown-menu" aria-labelledby="navbarDropdownMenuLink">
+                            <li><a class="dropdown-item {% if request.path == '/' %}active{% endif %}" href="{{ url_for('index') }}">Home</a></li>
+                            <li><a class="dropdown-item {% if request.path == '/schema' %}active{% endif %}" href="{{ url_for('db_schema') }}">Database Schema</a></li>
+                            {% if session.user_id %}
+                                {% if session.username == 'Admin' %}
+                                    <li><a class="dropdown-item {% if request.path == '/admin' %}active{% endif %}" href="{{ url_for('admin_panel') }}">Admin Panel</a></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ url_for('logout') }}">Logout ({{ session.username }})</a></li>
+                            {% else %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item {% if request.path == '/login' %}active{% endif %}" href="{{ url_for('login') }}">Login</a></li>
+                                <li><a class="dropdown-item {% if request.path == '/register' %}active{% endif %}" href="{{ url_for('register') }}">Register</a></li>
+                            {% endif %}
+                        </ul>
                     </li>
                 </ul>
             </div>

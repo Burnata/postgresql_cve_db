@@ -16,12 +16,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Create directory for SSL certificates
-RUN mkdir -p /app/ssl
-
-# Environment variables for SSL
-ENV SSL_CERT_PATH=/etc/ssl/certs/tls.crt
-ENV SSL_KEY_PATH=/etc/ssl/certs/tls.key
 
 EXPOSE 5000
 

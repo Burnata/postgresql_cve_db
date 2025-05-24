@@ -5,5 +5,5 @@ namespace: postgres-db
 
 resources:
   - deployment.yaml
-  - service.yaml
+  # - service.yaml
   - /secret/secret.yaml

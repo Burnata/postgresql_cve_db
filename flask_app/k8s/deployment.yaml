@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: cve-flask-app
-        image: burnata/postgres-db-cve-forms:latest
+        image: burnata/postgres-db-cve-forms:0.2
         imagePullPolicy: Always
         ports:
         - containerPort: 5000
@@ -48,10 +48,10 @@ spec:
             secretKeyRef:
               name: cve-flask-app-secret
               key: DB_PASSWORD
-        volumeMounts:
-        - name: ssl-cert
-          mountPath: "/etc/ssl/certs"
-          readOnly: true
+        # volumeMounts:
+        # - name: ssl-cert
+        #   mountPath: "/etc/ssl/certs"
+        #   readOnly: true
         resources:
           limits:
             cpu: "0.5"
@@ -59,12 +59,12 @@ spec:
           requests:
             cpu: "0.2"
             memory: "128Mi"
-      volumes:
-      - name: ssl-cert
-        secret:
-          secretName: cve-flask-app-secret
-          items:
-          - key: tls.crt
-            path: tls.crt
-          - key: tls.key
-            path: tls.key
+      # volumes:
+      # - name: ssl-cert
+      #   secret:
+      #     secretName: cve-flask-app-secret
+      #     items:
+      #     - key: tls.crt
+      #       path: tls.crt
+      #     - key: tls.key
+      #       path: tls.key

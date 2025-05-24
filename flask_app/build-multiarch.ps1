@@ -2,7 +2,7 @@
 
 # Variables
 $IMAGE_NAME = "burnata/postgres-db-cve-forms"
-$IMAGE_TAG = "latest"
+$IMAGE_TAG = "0.2"
 
 # Make sure Docker Buildx is available and create a new builder instance if needed
 try {
@@ -13,7 +13,7 @@ try {
 
 # Build and push multi-architecture image
 Write-Host "Building and pushing multi-architecture image..."
-docker buildx build --platform linux/amd64,linux/arm64 `
+docker buildx build --platform linux/arm64 `
   -t ${IMAGE_NAME}:${IMAGE_TAG} `
   --push `
   .

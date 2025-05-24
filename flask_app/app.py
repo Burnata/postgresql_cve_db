@@ -1,20 +1,34 @@
 import os
-from flask import Flask, render_template, request, redirect, url_for, send_from_directory
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash, session
+from werkzeug.security import generate_password_hash, check_password_hash
 import psycopg2
 from psycopg2.extras import DictCursor
 from dotenv import load_dotenv
 import sys
-import ssl
+from functools import wraps # Add this import
+
+# import ssl
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.getenv('FLASK_SECRET_KEY', 'supersecretkey') # Add a secret key for session management
 
-# Route to serve PKI validation file
-@app.route('/.well-known/pki-validation/<filename>')
-def serve_pki_validation_file(filename):
-    return send_from_directory(os.path.join(app.root_path, '.well-known/pki-validation'), filename)
+# Admin required decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session or session.get('username') != 'Admin':
+            flash('You do not have permission to access this page.', 'danger')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# # Route to serve PKI validation file
+# @app.route('/.well-known/pki-validation/<filename>')
+# def serve_pki_validation_file(filename):
+#     return send_from_directory(os.path.join(app.root_path, '.well-known/pki-validation'), filename)
 
 def get_connection():
     try:
@@ -262,17 +276,188 @@ def db_schema():
     
     return render_template('schema.html', tables=tables, relationships=relationships, error_message=error_message)
 
-if __name__ == '__main__':
-    ssl_context = None
-    cert_path = os.getenv('SSL_CERT_PATH')
-    key_path = os.getenv('SSL_KEY_PATH')
-    
-    if cert_path and key_path and os.path.exists(cert_path) and os.path.exists(key_path):
-        # Create SSL context with TLS 1.3
-        ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-        ssl_context.load_cert_chain(cert_path, key_path)
-        ssl_context.minimum_version = ssl.TLSVersion.TLSv1_3
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        error = None
+
+        if not username:
+            error = 'Username is required.'
+        elif not password:
+            error = 'Password is required.'
+        elif password != confirm_password:
+            error = 'Passwords do not match.'
         
-        app.run(host='0.0.0.0', port=5000, debug=True, ssl_context=ssl_context)
-    else:
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        if error is None:
+            conn = get_connection()
+            try:
+                with conn.cursor(cursor_factory=DictCursor) as cur:
+                    cur.execute("SELECT id FROM users WHERE username = %s", (username,))
+                    if cur.fetchone() is not None:
+                        error = f"User {username} is already registered."
+                    else:
+                        hashed_password = generate_password_hash(password)
+                        cur.execute("INSERT INTO users (username, password_hash) VALUES (%s, %s)",
+                                    (username, hashed_password))
+                        conn.commit()
+                        flash('Registration successful! Please log in.', 'success')
+                        return redirect(url_for('login'))
+            except Exception as e:
+                app.logger.error(f"Database error during registration: {e}")
+                error = "An error occurred during registration. Please try again."
+            finally:
+                if conn:
+                    conn.close()
+        
+        if error:
+            flash(error, 'danger')
+
+    return render_template('register.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        error = None
+        conn = get_connection()
+        try:
+            with conn.cursor(cursor_factory=DictCursor) as cur:
+                cur.execute("SELECT * FROM users WHERE username = %s", (username,))
+                user = cur.fetchone()
+
+            if user is None:
+                error = 'Incorrect username.'
+            elif not check_password_hash(user['password_hash'], password):
+                error = 'Incorrect password.'
+
+            if error is None:
+                session.clear()
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                flash('Login successful!', 'success')
+                return redirect(url_for('index'))
+        except Exception as e:
+            app.logger.error(f"Database error during login: {e}")
+            error = "An error occurred during login. Please try again."
+        finally:
+            if conn:
+                conn.close()
+        
+        if error:
+            flash(error, 'danger')
+            
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('login'))
+
+@app.route('/admin')
+@admin_required
+def admin_panel():
+    conn = get_connection()
+    users = []
+    try:
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            # Fetch all users except the Admin user itself
+            cur.execute("SELECT id, username FROM users WHERE username != 'Admin' ORDER BY username")
+            users = cur.fetchall()
+    except Exception as e:
+        app.logger.error(f"Database error fetching users for admin panel: {e}")
+        flash("Error fetching user list.", "danger")
+    finally:
+        if conn:
+            conn.close()
+    return render_template('admin_panel.html', users=users)
+
+@app.route('/admin/delete_user/<int:user_id>', methods=['POST'])
+@admin_required
+def delete_user(user_id):
+    conn = get_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM users WHERE id = %s AND username != 'Admin'", (user_id,))
+            conn.commit()
+            if cur.rowcount > 0:
+                flash('User deleted successfully.', 'success')
+            else:
+                flash('User not found or cannot be deleted.', 'warning')
+    except Exception as e:
+        app.logger.error(f"Database error deleting user: {e}")
+        flash('Error deleting user.', 'danger')
+    finally:
+        if conn:
+            conn.close()
+    return redirect(url_for('admin_panel'))
+
+@app.route('/admin/edit_user/<int:user_id>', methods=['GET', 'POST'])
+@admin_required
+def admin_edit_user(user_id):
+    conn = get_connection()
+    user = None
+    try:
+        with conn.cursor(cursor_factory=DictCursor) as cur:
+            cur.execute("SELECT id, username FROM users WHERE id = %s AND username != 'Admin'", (user_id,))
+            user = cur.fetchone()
+        
+        if not user:
+            flash('User not found or cannot be edited.', 'warning')
+            return redirect(url_for('admin_panel'))
+
+        if request.method == 'POST':
+            new_password = request.form['password']
+            confirm_password = request.form['confirm_password']
+
+            if not new_password:
+                flash('New password cannot be empty.', 'danger')
+            elif new_password != confirm_password:
+                flash('Passwords do not match.', 'danger')
+            else:
+                hashed_password = generate_password_hash(new_password)
+                try: # New try block for update
+                    with conn.cursor() as cur_update: # New cursor for update
+                        cur_update.execute("UPDATE users SET password_hash = %s WHERE id = %s", (hashed_password, user_id))
+                        conn.commit()
+                    flash('Password updated successfully.', 'success')
+                    return redirect(url_for('admin_panel'))
+                except Exception as e_update:
+                    app.logger.error(f"Database error updating password: {e_update}")
+                    flash('Error updating password.', 'danger')
+    finally: # Ensure connection is closed if opened
+        if conn and request.method == 'GET': # Only close if GET, POST will close after update or error
+             conn.close()
+        elif conn and request.method == 'POST' and not 'cur_update' in locals() : # if POST failed before update cursor
+             conn.close()
+
+
+    # If GET request or POST failed before redirect, render the edit page
+    # The connection might have been closed by the finally block if it was a GET or early POST error
+    # Re-fetch user if connection was closed and it's a GET request or POST had an error before update
+    if not user and conn.closed: # Simplified check
+        conn = get_connection() # Reopen if closed
+        try:
+            with conn.cursor(cursor_factory=DictCursor) as cur_refetch:
+                cur_refetch.execute("SELECT id, username FROM users WHERE id = %s AND username != 'Admin'", (user_id,))
+                user = cur_refetch.fetchone()
+        except Exception as e_refetch:
+            app.logger.error(f"Database error re-fetching user for edit: {e_refetch}")
+            flash("Error loading user details for editing.", "danger")
+            return redirect(url_for('admin_panel')) # Redirect if re-fetch fails
+        finally:
+            if conn and not conn.closed: # Close if re-opened
+                conn.close()
+    
+    if not user: # If user still not found after potential re-fetch
+        flash('User not found or cannot be edited.', 'warning')
+        return redirect(url_for('admin_panel'))
+        
+    return render_template('admin_edit_user.html', user=user)
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
