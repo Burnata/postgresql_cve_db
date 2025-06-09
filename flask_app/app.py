@@ -44,7 +44,15 @@ def get_connection():
         print(f"Database connection error: {e}", file=sys.stderr)
         raise
 
+@app.route('/info')
+def info_page():
+    return render_template('info.html')
+
 @app.route('/')
+def home():
+    return redirect(url_for('info_page'))
+
+@app.route('/db')
 def index():
     # Query parameters for filtering
     vendor = request.args.get('vendor', '')

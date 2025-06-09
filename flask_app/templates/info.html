@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Info Page{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="jumbotron">
+        <h1 class="display-4">Welcome to the CVE Dashboard!</h1>
+        <p class="lead">Your central hub for Common Vulnerabilities and Exposures (CVE) information.</p>
+        <hr class="my-4">
+        <p>This application provides a comprehensive and searchable database of CVEs, allowing you to stay informed about the latest security vulnerabilities. </p>
+        <p>Explore detailed information about each CVE, including affected packages, severity scores, exploit availability, and fix statuses.</p>
+        
+        <div class="row mt-4">
+            <div class="col-md-4">
+                <h2><i class="fas fa-search"></i> Search & Filter</h2>
+                <p>Easily search for specific CVEs or filter by vendor, exploit availability, and fix status to find the information you need quickly.</p>
+            </div>
+            <div class="col-md-4">
+                <h2><i class="fas fa-database"></i> Comprehensive Data</h2>
+                <p>Access details on a vast collection of vulnerabilities, aggregated from various sources to provide a complete picture.</p>
+            </div>
+            <div class="col-md-4">
+                <h2><i class="fas fa-shield-alt"></i> Stay Secure</h2>
+                <p>Keep your systems secure by staying updated on the latest threats and their resolutions.</p>
+            </div>
+        </div>
+        
+        <p class="lead mt-5">
+            <a class="btn btn-primary btn-lg" href="{{ url_for('index') }}" role="button">
+                <i class="fas fa-arrow-circle-right"></i> Explore the CVE Database
+            </a>
+        </p>
+    </div>
+
+    <div class="row text-center mt-5">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Database Schema</h5>
+                    <p class="card-text">Understand the structure of our CVE data and how different pieces of information are related.</p>
+                    <a href="{{ url_for('db_schema') }}" class="btn btn-outline-secondary">View Schema</a>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">User Accounts</h5>
+                    <p class="card-text">Register for an account to access additional features or log in if you already have one.</p>
+                    {% if 'user_id' not in session %}
+                        <a href="{{ url_for('register') }}" class="btn btn-outline-info mr-2">Register</a>
+                        <a href="{{ url_for('login') }}" class="btn btn-outline-success">Login</a>
+                    {% else %}
+                        <p>Welcome, {{ session.username }}!</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Font Awesome for icons (add to base.html if not already there) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+{% endblock %}
